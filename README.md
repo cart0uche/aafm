@@ -1,15 +1,11 @@
-aafm
+Android ADB File Manager (aafm)
 ====
 
-# Android ADB File Manager #
+An Android ADB-based file manager [created](https://github.com/sole/aafm) by [Soledad Penadés](http://soledadpenades.com).  It is continued here because development has ceased on the original repository.
 
-A command line + GUI (GTK based) Android ADB-based file manager
+![Screenshot](http://i.imgur.com/jeG6YUt.png)
 
-![Screenshot](http://sole.github.com/aafm/screenshot.png)
-
-Recent Android releases (Honeycomb / 3.0+) replace the older USB mount protocol with the use of MTP (Massive Transfer Protocol). Unfortunately this is still very buggy and doesn't work as it should in any machine I have tested (and heard of): system slowing down to a halt when transferring large number of files, files which are there but cannot be seen by the computer... etc.
-
-So I decided to go ahead and build a little utility that would if not fix, at least alleviate the pain of using Honeycomb devices. **aafm** uses ADB (one of the command line tools provided with the official Android SDK) for communicating with the Android device. This is the same method that IDEs implement.
+**aafm** uses ADB (one of the command line tools provided with the official Android SDK) to facilitate easy file transfers to/from any Android device.
 
 ## Installing ##
 
@@ -27,7 +23,7 @@ One note though: there are a few hiccups with the Mac version, but they are most
 
 Clone this repository to a place you fancy. For example, your Applications folder.
 
-```git clone git://github.com/sole/aafm.git ~/Applications/aafm```
+```git clone git://github.com/tslocum/aafm.git ~/Applications/aafm```
 
 ### Install the Android SDK ###
 
@@ -101,7 +97,6 @@ If everything else fails, try to log in and out again, or maybe even restart the
 
 More information on udev rules and Android can be found on the official Android development guide: http://developer.android.com/guide/developing/device.html
 
-
 ### Enable Debug mode in the device ###
 
 Go to _Settings → Applications → Development_ and make sure the USB debugging checkbox is ticked. You might get a scary warning saying debugging allows you to do nasty things--just ignore it.
@@ -133,54 +128,11 @@ You can navigate just as you would do with your favourite file explorer. Files c
 
 Be warned that currently the progress reporting is a bit hackish and with large files it will appear as if the window has got frozen. It hasn't--it's just waiting for the ADB transfer to finish. In the future this should be fixed, but I haven't come up with the best solution yet.
 
-
 ## License ##
 
-Copyright (C) 2011-2012 Soledad Penades (http://soledadpenades.com).
+Original code copyright (C) 2011-2012 Soledad Penades (http://soledadpenades.com).
 
-This software is licensed under a GPL V3 license. Please read the accompanying LICENSE.txt file for more details, but basically, if you modify this software and distribute it, you must make your changes public too, so that everyone can benefit from your work--just as you're doing with mine. 
-
-You can also make your changes public even if you don't plan on redistributing this application, okay? Sharing is good! :-)
-
-
-## Change log ##
-
-2012 09 25 - **r5**
-
-Several bug fixes and refactoring, plus a nice addition for those using desktop systems in Linux!
-
-* New .desktop file and icon allows users to launch aafm from GNOME/KDE/etc menus/shells/launchers ([Huulivoide](http://github.com/Huulivoide)). Fixes #35.
-* New setup.py script for making aafm available system-wide ([Huulivoide](http://github.com/Huulivoide)). Fixes #35.
-* Fix/refactor copying files between host and device ([sole](http://github.com/sole), [xisberto](http://github.com/xisberto)). Fixes #33 and #37.
-* Gracefully handle unknown uids and gids ([sole](http://github.com/sole) and [muflone](http://github.com/muflone)). Fixes #8 and #39.
-
-2012 03 14 - **r4**
-
-Many interesting bug fixes and new features thanks to the work of Norman Rasmussen and Michał Kowalczuk. Thanks!
-
-* Add BusyBox support (by [sammael](http://github.com/sammael)). Fixes #11.
-* Handle device drops when there's no row present (by [normanr](http://github.com/normanr)). Fixes #9.
-* Handle symlinks on the device correctly (by [normanr](http://github.com/normanr)). Fixes #12.
-* Quote/Unquote special characters in drag&drop messages (by [normanr](http://github.com/normanr)). Fixes #10. 
-* Slightly improve the README. Clarify how to find out the device Id, add link to PyGTK binary for Mac users.
-* Move the TO DO list items that were on this README file over to the issue tracker in the project's page.
-
-2011 11 06 - **r3**
-
-* Fix issue #4: use correct path separator in device when running under Windows
-* Fix issue #5: support for finding out ownership in Windows
-* Python 3 compatibility
-* Start using REVISION file
-* README.md revised
-
-2011 09 30 - **r2**
-
-* Fix issue #3: ls -la fails in some devices
-
-2011 07 18 - **r1**
-
-* First initial release; basic functionality is here!
-
+This software is licensed under a GPL V3 license. Please read the accompanying LICENSE.txt file for more details.
 
 ## Attributions ##
 
@@ -189,6 +141,7 @@ Many interesting bug fixes and new features thanks to the work of Norman Rasmuss
 - [FamFamFam icons](http://www.famfamfam.com/lab/icons/)
 - XDS with PyGTK [tutorial](http://rodney.id.au/dev/gnome/an-xds-example)
 - Issues and patches from [Toby Collett](https://github.com/thjc), [Peter Sinnott](https://github.com/psinnott) and [Alexalex89](https://github.com/Alexalex89).
+- Development continued by [tslocum](https://github.com/tslocum)
 
 ## Hacking ##
 
@@ -209,10 +162,6 @@ This was initially developed in an Ubuntu Linux 10.10 system. I thought it would
 - Arch Linux
 - Windows (!!!)
 
+## Suggestions and bug reports ##
 
-## TO DO ##
-
-I'm now using Github's issue tracker to keep track of issues, bugs and wished-for features.
-
-If you'd like to have a certain feature or think you've found a bug that is not in the list, please add it to the issue tracker at https://github.com/sole/aafm/issues
-
+If you'd like to have a certain feature or you've found an unreported bug, please add it to the issue tracker at https://github.com/tslocum/aafm/issues
