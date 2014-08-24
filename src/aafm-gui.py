@@ -139,6 +139,7 @@ class Aafm_GUI:
 		self.progress_bar = builder.get_object('progressBar')
 
 		# Some more subtle details...
+		self.window.set_icon_from_file('./data/icons/aafm.svg')
 		self.window.set_title("Android ADB file manager")
 		#self.adb = 'adb'
 		self.host_cwd = os.getcwd()

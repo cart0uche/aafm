@@ -77,6 +77,10 @@ class TreeViewFile:
 		group_col = gtk.TreeViewColumn('Group')
 		self.tree_view.append_column(group_col)
 
+		# Set all columns as resizable
+		for column in self.tree_view.get_columns():
+			column.set_resizable(True)
+
 		group_col_renderer = gtk.CellRendererText()
 		group_col.pack_start(group_col_renderer, expand=True)
 		group_col.add_attribute(group_col_renderer, 'text', 6)
@@ -111,4 +115,4 @@ class TreeViewFile:
 
 			rowIter = self.tree_store.append(None, [ row['directory'], row['name'], size, row['timestamp'], row['permissions'], row['owner'], row['group'] ])
 
-
+		self.tree_view.columns_autosize()
