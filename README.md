@@ -49,9 +49,9 @@ So the changes to the PATH get current. In Mac OS you might need to log in and o
 
 ### Configure udev rules (if in Linux) ###
 
-You need to let the system know that when you connect your USB device (i.e. the tablet) it should allow you, as a non-root user, to access it. If you don't do that, you'll get a "Insufficient permissions for device" error.
+**Note:** This step may not be required.  Try using the program, and if you encounter a "Insufficient permissions for device" error, you will need to do the following.
 
-This is done by adding a new file that contains so called udev rules.
+You need to let the system know that when you connect your USB device (i.e. the tablet) it should allow you, as a non-root user, to access it.  This is done by adding a new file that contains so called udev rules.
 
 For example, in Ubuntu 10.10 you would add a file in ```/etc/udev/rules.d/51-android.rules``` with the following content:
 
