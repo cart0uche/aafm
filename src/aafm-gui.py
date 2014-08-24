@@ -140,7 +140,7 @@ class Aafm_GUI:
 
 		# Some more subtle details...
 		self.window.set_icon_from_file('./data/icons/aafm.svg')
-		self.window.set_title("Android ADB file manager")
+		self.window.set_title("Android ADB File Manager")
 		#self.adb = 'adb'
 		self.host_cwd = os.getcwd()
 		self.device_cwd = '/mnt/sdcard/'
@@ -215,6 +215,12 @@ class Aafm_GUI:
 	def get_device_selected_files(self):
 		return self.get_treeviewfile_selected(self.device_treeViewFile)
 
+	def human_readable_size(self, size):
+		for x in ['B','K','M','G']:
+			if size < 1024.0:
+				return "%3.1f%s" % (size, x)
+			size /= 1024.0
+		return "%3.1f%s" % (size, 'T')
 
 	""" Walks through a directory and return the data in a tree-style list 
 		that can be used by the TreeViewFile """
@@ -251,7 +257,7 @@ class Aafm_GUI:
 			path = os.path.join(directory, f)
 
 			try:
-				size = os.path.getsize(path)
+				size = self.human_readable_size(os.path.getsize(path))
 				output.append({
 					'directory': False,
 					'name': f,
@@ -363,7 +369,7 @@ class Aafm_GUI:
 			})
 
 		for f in files:
-			size = int(entries[f]['size'])
+			size = self.human_readable_size(int(entries[f]['size']))
 			output.append({
 				'directory': False,
 				'name': f,

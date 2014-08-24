@@ -42,6 +42,7 @@ class TreeViewFile:
 		self.tree_view.append_column(size_col)
 		
 		size_col_renderer = gtk.CellRendererText()
+		size_col_renderer.set_alignment(1.0, 0.0)
 		size_col.pack_start(size_col_renderer, expand=True)
 		size_col.add_attribute(size_col_renderer, 'text', 2)
 		size_col.set_sort_column_id(2)
