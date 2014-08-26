@@ -54,6 +54,24 @@ class Aafm_GUI:
 		builder.add_from_file(os.path.join(self.basedir, "data/glade/interface.xml"))
 		builder.connect_signals({ "on_window_destroy" : gtk.main_quit })
 		self.window = builder.get_object("window")
+		vbox1 = builder.get_object("vbox1")
+
+		# Build menu from XML
+		uimanager = gtk.UIManager()
+		accelgroup = uimanager.get_accel_group()
+		self.window.add_accel_group(accelgroup)
+
+		actiongroup = gtk.ActionGroup('Main')
+		actiongroup.add_actions([('Quit', gtk.STOCK_QUIT, '_Quit', None,
+                                  'Quit aafm', self.destroy),
+                                 ('File', None, '_File')])
+		uimanager.insert_action_group(actiongroup, 0)
+
+		uimanager.add_ui_from_file(os.path.join(self.basedir, "data/glade/menu.xml"))
+		menubar = uimanager.get_widget('/MenuBar')
+
+		vbox1.pack_start(menubar, False, False, 0)
+		vbox1.reorder_child(menubar, 0)
 
 		imageDir = gtk.Image()
 		imageDir.set_from_file(os.path.join(self.basedir, './data/icons/folder.png'))
