@@ -12,6 +12,7 @@ import stat
 import pwd
 import grp
 import urllib
+import ConfigParser
 
 if os.name == 'nt':
 	import win32api
@@ -35,7 +36,27 @@ class Aafm_GUI:
 	XDS_FILENAME = 'whatever.txt'
 
 	def __init__(self):
-		
+
+		# Read settings
+		self.config = ConfigParser.SafeConfigParser({'startdir_host': '.', 'startdir_device': '/mnt/sdcard'})
+		self.config_file_loc = ""
+		self.config_file_loc_default = os.path.join(os.path.expanduser("~"), ".aafm")
+		for file_loc in os.curdir, os.path.expanduser("~"), os.environ.get("AAFM_CONF"):
+			try:
+				if file_loc is not None:
+					with open(os.path.join(file_loc, ".aafm")) as source:
+						self.config.readfp(source)
+						self.config_file_loc = file_loc
+						break
+			except IOError:
+				pass
+
+		# Test for the aafm section and add it if it's missing
+		try:
+			self.config.get("aafm", "startdir_host")
+		except ConfigParser.NoSectionError:
+			self.config.add_section("aafm")
+
 		# The super core
 		self.aafm = Aafm('adb', os.getcwd(), '/mnt/sdcard/')
 		self.queue = []
@@ -52,7 +73,7 @@ class Aafm_GUI:
 		# Build main window from XML
 		builder = gtk.Builder()
 		builder.add_from_file(os.path.join(self.basedir, "data/glade/interface.xml"))
-		builder.connect_signals({ "on_window_destroy" : gtk.main_quit })
+		builder.connect_signals({ "on_window_destroy" : self.destroy })
 		self.window = builder.get_object("window")
 		vbox1 = builder.get_object("vbox1")
 
@@ -840,13 +861,30 @@ class Aafm_GUI:
 
 		yield False
 
+	def write_settings_file(self):
+		try:
+			with open(self.config_file_loc, 'w') as config_file:
+				self.config.write(config_file)
+				return True
+		except IOError:
+			return False
 
+	def write_settings(self):
+		# Set config location to home directory if we couldn't find a working path
+		if self.config_file_loc == "":
+			self.config_file_loc = self.config_file_loc_default
+
+		if not self.write_settings_file():
+			# Set config location to home directory if we don't have write access to the found path
+			self.config_file_loc = self.config_file_loc_default
+			self.write_settings_file()
 
 	def die_callback(self, widget, data=None):
 		self.destroy(widget, data)
 
 
 	def destroy(self, widget, data=None):
+		self.write_settings()
 		gtk.main_quit()
 
 
