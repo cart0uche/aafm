@@ -136,7 +136,7 @@ Be warned that currently the progress reporting is a bit hackish and with large 
 
 Original code copyright (C) 2011-2012 Soledad Penades (http://soledadpenades.com).
 
-This software is licensed under a GPL V3 license. Please read the accompanying LICENSE.txt file for more details.
+This software is licensed under a GPL V3 license. Please read the accompanying LICENSE.md file for more details.
 
 ## Attributions ##
 
