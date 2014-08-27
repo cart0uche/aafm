@@ -6,12 +6,12 @@ from distutils.core import setup
 prefix=sys.prefix + '/bin'
 
 setup(name='aafm',
-      version='0.4',
+      version='0.5',
       description='Android ADB File Manager',
-      author='Soledad Penades',
-      author_email='hello@soledadpenades.com',
+      author='Trevor Slocum',
+      author_email='tslocum@gmail.com',
       license='GPLv3',
-      url='https://github.com/sole/aafm',
+      url='https://github.com/tslocum/aafm',
       packages=['aafm'],
       package_dir={'aafm': 'src'},
       package_data={'aafm': ['data/*/*']},

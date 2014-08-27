@@ -7,11 +7,19 @@ An Android ADB-based file manager [created](https://github.com/sole/aafm) by [So
 
 **aafm** uses ADB (one of the command line tools provided with the official Android SDK) to facilitate easy file transfers to/from any Android device.
 
-## Plans ##
-
-Once a few helpful features have been implemented, aafm will be submitted for consideration as an official Ubuntu and Debian package.  A PPA will be soon be available for those who would like to help review the package.  This package will depend on [android-tools-adb](http://packages.ubuntu.com/trusty/android-tools-adb), allowing users to install the package without requiring the entire Android SDK.  Testers would be appreciated once this package has been prepared.
-
 ## Installing ##
+
+To install **aafm** on Debian or Ubuntu, run the following in a terminal:
+
+```
+sudo add-apt-repository ppa:yannubuntu/boot-repair
+sudo apt-get update
+sudo apt-get install aafm
+```
+
+**Note:** If you run into any problems using this package, please submit an issue including a log of apt's output.
+
+## Building ##
 
 ### Requirements ###
 

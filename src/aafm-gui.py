@@ -132,9 +132,9 @@ class Aafm_GUI:
 		vbox1.reorder_child(menubar, 0)
 
 		imageDir = gtk.Image()
-		imageDir.set_from_file(os.path.join(self.basedir, './data/icons/folder.png'))
+		imageDir.set_from_file(os.path.join(self.basedir, "data/icons/folder.png"))
 		imageFile = gtk.Image()
-		imageFile.set_from_file(os.path.join(self.basedir, './data/icons/file.png'))
+		imageFile.set_from_file(os.path.join(self.basedir, "data/icons/file.png"))
 
 		# Show hidden files and folders
 		showHidden = builder.get_object('showHidden')
@@ -213,7 +213,7 @@ class Aafm_GUI:
 		self.progress_bar = builder.get_object('progressBar')
 
 		# Some more subtle details...
-		self.window.set_icon_from_file('./data/icons/aafm.svg')
+		self.window.set_icon_from_file(os.path.join(self.basedir, "data/icons/aafm.svg"))
 		#self.adb = 'adb'
 
 		self.refresh_host_files()
@@ -974,7 +974,7 @@ class Aafm_GUI:
 		showGroup.connect('toggled', self.on_toggle_group)
 
 		self.window_prefs = builder_prefs.get_object("window")
-		self.window_prefs.set_icon_from_file('./data/icons/aafm.svg')
+		self.window_prefs.set_icon_from_file(os.path.join(self.basedir, "data/icons/aafm.svg"))
 
 		self.window_prefs.show_all()
 
