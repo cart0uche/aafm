@@ -12,7 +12,7 @@ An Android ADB-based file manager [created](https://github.com/sole/aafm) by [So
 To install **aafm** on Debian or Ubuntu, run the following in a terminal:
 
 ```
-sudo add-apt-repository ppa:yannubuntu/boot-repair
+sudo add-apt-repository ppa:tslocum/aafm
 sudo apt-get update
 sudo apt-get install aafm
 ```
