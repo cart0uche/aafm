@@ -39,8 +39,8 @@ class Aafm_GUI:
 
 		# Read settings
 		self.config = ConfigParser.SafeConfigParser({'lastdir_host': '', 'lastdir_device': '',
-				'startdir_host': 'last', 'startdir_host_path': '.',
-				'startdir_device': 'last', 'startdir_device_path': '/mnt/sdcard',
+				'startdir_host': 'last', 'startdir_host_path': '',
+				'startdir_device': 'last', 'startdir_device_path': '',
 				'show_hidden': 'no', 'show_modified': 'yes',
 				'show_permissions': 'no', 'show_owner': 'no',
 				'show_group': 'no'})
@@ -79,7 +79,7 @@ class Aafm_GUI:
 			self.host_cwd = self.startDirHostPath
 
 		if not os.path.isdir(self.host_cwd):
-			self.host_cwd = os.getcwd()
+			self.host_cwd = os.path.expanduser("~")
 
 		if self.startDirDevice == 'last':
 			self.device_cwd = self.config.get("aafm", "lastdir_device")
