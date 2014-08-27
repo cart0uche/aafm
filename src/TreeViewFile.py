@@ -5,7 +5,7 @@ import MultiDragTreeView
 """ A sort of TreeView container that serves for showing file listings """
 class TreeViewFile:
 
-	def __init__(self, pixbufDir, pixbufFile):
+	def __init__(self, pixbufDir, pixbufFile, showModified, showPermissions, showOwner, showGroup):
 		
 		self.pixbufDirectory = pixbufDir
 		self.pixbufFile = pixbufFile
@@ -48,45 +48,48 @@ class TreeViewFile:
 		size_col.set_sort_column_id(2)
 
 		# TIMESTAMP
-		time_col = gtk.TreeViewColumn('Date modified')
-		self.tree_view.append_column(time_col)
+		if showModified:
+			time_col = gtk.TreeViewColumn('Last modified')
+			self.tree_view.append_column(time_col)
 
-		time_col_renderer = gtk.CellRendererText()
-		time_col.pack_start(time_col_renderer, expand=True)
-		time_col.add_attribute(time_col_renderer, 'text', 3)
-		time_col.set_sort_column_id(3)
+			time_col_renderer = gtk.CellRendererText()
+			time_col.pack_start(time_col_renderer, expand=True)
+			time_col.add_attribute(time_col_renderer, 'text', 3)
+			time_col.set_sort_column_id(3)
 
 		# PERMISSIONS
-		perm_col = gtk.TreeViewColumn('Permissions')
-		self.tree_view.append_column(perm_col)
+		if showPermissions:
+			perm_col = gtk.TreeViewColumn('Permissions')
+			self.tree_view.append_column(perm_col)
 
-		perm_col_renderer = gtk.CellRendererText()
-		perm_col.pack_start(perm_col_renderer, expand=True)
-		perm_col.add_attribute(perm_col_renderer, 'text', 4)
-		perm_col.set_sort_column_id(4)
+			perm_col_renderer = gtk.CellRendererText()
+			perm_col.pack_start(perm_col_renderer, expand=True)
+			perm_col.add_attribute(perm_col_renderer, 'text', 4)
+			perm_col.set_sort_column_id(4)
 
 		# OWNER
-		own_col = gtk.TreeViewColumn('Owner')
-		self.tree_view.append_column(own_col)
+		if showOwner:
+			own_col = gtk.TreeViewColumn('Owner')
+			self.tree_view.append_column(own_col)
 
-		own_col_renderer = gtk.CellRendererText()
-		own_col.pack_start(own_col_renderer, expand=True)
-		own_col.add_attribute(own_col_renderer, 'text', 5)
-		own_col.set_sort_column_id(5)
+			own_col_renderer = gtk.CellRendererText()
+			own_col.pack_start(own_col_renderer, expand=True)
+			own_col.add_attribute(own_col_renderer, 'text', 5)
+			own_col.set_sort_column_id(5)
 
 		# GROUP
-		group_col = gtk.TreeViewColumn('Group')
-		self.tree_view.append_column(group_col)
+		if showGroup:
+			group_col = gtk.TreeViewColumn('Group')
+			self.tree_view.append_column(group_col)
+
+			group_col_renderer = gtk.CellRendererText()
+			group_col.pack_start(group_col_renderer, expand=True)
+			group_col.add_attribute(group_col_renderer, 'text', 6)
+			group_col.set_sort_column_id(6)
 
 		# Set all columns as resizable
 		for column in self.tree_view.get_columns():
 			column.set_resizable(True)
-
-		group_col_renderer = gtk.CellRendererText()
-		group_col.pack_start(group_col_renderer, expand=True)
-		group_col.add_attribute(group_col_renderer, 'text', 6)
-		group_col.set_sort_column_id(6)
-
 
 	def render_dir_or_file(self, tree_view_column, cell, model, iter):
 		isDir = model.get_value(iter, 0)

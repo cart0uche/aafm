@@ -5,10 +5,11 @@ import time
 import pipes
 
 class Aafm:
-	def __init__(self, adb='adb', host_cwd=None, device_cwd='/'):
+	def __init__(self, adb='adb', host_cwd=None, device_cwd='/', aafmgui=None):
 		self.adb = adb
 		self.host_cwd = host_cwd
 		self.device_cwd = device_cwd
+		self.aafmgui = aafmgui
 		
 		# The Android device should always use POSIX path style separators (/),
 		# so we can happily use os.path.join when running on Linux (which is POSIX)
@@ -112,6 +113,14 @@ class Aafm:
 					'group': group
 				}
 
+			elif "such file or directory": # Non-existent directory
+				if self.device_cwd != '/mnt/sdcard':
+					if self.aafmgui is not None:
+						self.device_cwd = '/mnt/sdcard/'
+						self.aafmgui.device_cwd = '/mnt/sdcard'
+						return  self.parse_device_list(self.device_list_files(self._path_join_function(self.device_cwd, '')))
+					else:
+						self.set_device_cwd('/mnt/sdcard')
 			else:
 				print line, "wasn't matched, please report to the developer!"
 

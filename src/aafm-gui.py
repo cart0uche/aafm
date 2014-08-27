@@ -38,7 +38,12 @@ class Aafm_GUI:
 	def __init__(self):
 
 		# Read settings
-		self.config = ConfigParser.SafeConfigParser({'startdir_host': '.', 'startdir_device': '/mnt/sdcard'})
+		self.config = ConfigParser.SafeConfigParser({'lastdir_host': '', 'lastdir_device': '',
+				'startdir_host': 'last', 'startdir_host_path': '.',
+				'startdir_device': 'last', 'startdir_device_path': '/mnt/sdcard',
+				'show_hidden': 'no', 'show_modified': 'yes',
+				'show_permissions': 'no', 'show_owner': 'no',
+				'show_group': 'no'})
 		self.config_file_loc = ""
 		self.config_file_loc_default = os.path.join(os.path.expanduser("~"), ".aafm")
 		for file_loc in os.curdir, os.path.expanduser("~"), os.environ.get("AAFM_CONF"):
@@ -57,8 +62,35 @@ class Aafm_GUI:
 		except ConfigParser.NoSectionError:
 			self.config.add_section("aafm")
 
+		# Store config variables
+		self.startDirHost = self.config.get("aafm", "startdir_host")
+		self.startDirHostPath = self.config.get("aafm", "startdir_host_path")
+		self.startDirDevice = self.config.get("aafm", "startdir_device")
+		self.startDirDevicePath = self.config.get("aafm", "startdir_device_path")
+		self.showHidden = (self.config.get("aafm", "show_hidden") == "yes")
+		self.showModified = (self.config.get("aafm", "show_modified") == "yes")
+		self.showPermissions = (self.config.get("aafm", "show_permissions") == "yes")
+		self.showOwner = (self.config.get("aafm", "show_owner") == "yes")
+		self.showGroup = (self.config.get("aafm", "show_group") == "yes")
+
+		if self.startDirHost == 'last':
+			self.host_cwd = self.config.get("aafm", "lastdir_host")
+		else:
+			self.host_cwd = self.startDirHostPath
+
+		if not os.path.isdir(self.host_cwd):
+			self.host_cwd = os.getcwd()
+
+		if self.startDirDevice == 'last':
+			self.device_cwd = self.config.get("aafm", "lastdir_device")
+		else:
+			self.device_cwd = self.startDirDevicePath
+
+		if self.device_cwd == '':
+			self.device_cwd = '/mnt/sdcard'
+
 		# The super core
-		self.aafm = Aafm('adb', os.getcwd(), '/mnt/sdcard/')
+		self.aafm = Aafm('adb', self.host_cwd, self.device_cwd, self)
 		self.queue = []
 
 		self.basedir = os.path.dirname(os.path.abspath(__file__))
@@ -77,15 +109,20 @@ class Aafm_GUI:
 		self.window = builder.get_object("window")
 		vbox1 = builder.get_object("vbox1")
 
+		# Set preferences window var
+		self.window_prefs = None
+
 		# Build menu from XML
 		uimanager = gtk.UIManager()
 		accelgroup = uimanager.get_accel_group()
 		self.window.add_accel_group(accelgroup)
 
 		actiongroup = gtk.ActionGroup('Main')
-		actiongroup.add_actions([('Quit', gtk.STOCK_QUIT, '_Quit', None,
-                                  'Quit aafm', self.destroy),
-                                 ('File', None, '_File')])
+		actiongroup.add_actions([('Preferences', gtk.STOCK_PREFERENCES, '_Preferences', None,
+				'Preferences', self.open_prefs),
+				('Quit', gtk.STOCK_QUIT, '_Quit', None,
+				'Quit aafm', self.destroy),
+				('File', None, '_File')])
 		uimanager.insert_action_group(actiongroup, 0)
 
 		uimanager.add_ui_from_file(os.path.join(self.basedir, "data/glade/menu.xml"))
@@ -98,17 +135,16 @@ class Aafm_GUI:
 		imageDir.set_from_file(os.path.join(self.basedir, './data/icons/folder.png'))
 		imageFile = gtk.Image()
 		imageFile.set_from_file(os.path.join(self.basedir, './data/icons/file.png'))
-		
-		# Show hidden files and folders
-		self.showHidden = False
 
+		# Show hidden files and folders
 		showHidden = builder.get_object('showHidden')
+		showHidden.set_active(self.showHidden)
 		showHidden.connect('toggled', self.on_toggle_hidden)
 
 		# Host and device TreeViews
 		
 		# HOST
-		self.host_treeViewFile = TreeViewFile(imageDir.get_pixbuf(), imageFile.get_pixbuf())
+		self.host_treeViewFile = TreeViewFile(imageDir.get_pixbuf(), imageFile.get_pixbuf(), self.showModified, self.showPermissions, self.showOwner, self.showGroup)
 		
 		hostFrame = builder.get_object('frameHost')
 		hostFrame.get_child().add(self.host_treeViewFile.get_view())
@@ -141,7 +177,7 @@ class Aafm_GUI:
 
 
 		# DEVICE
-		self.device_treeViewFile = TreeViewFile(imageDir.get_pixbuf(), imageFile.get_pixbuf())
+		self.device_treeViewFile = TreeViewFile(imageDir.get_pixbuf(), imageFile.get_pixbuf(), self.showModified, self.showPermissions, self.showOwner, self.showGroup)
 		
 		deviceFrame = builder.get_object('frameDevice')
 		deviceFrame.get_child().add(self.device_treeViewFile.get_view())
@@ -173,25 +209,15 @@ class Aafm_GUI:
 		
 		self.deviceFrame = deviceFrame
 
-
 		# Progress bar
 		self.progress_bar = builder.get_object('progressBar')
 
 		# Some more subtle details...
 		self.window.set_icon_from_file('./data/icons/aafm.svg')
-		self.window.set_title("Android ADB File Manager")
 		#self.adb = 'adb'
-		self.host_cwd = os.getcwd()
-		self.device_cwd = '/mnt/sdcard/'
 
 		self.refresh_host_files()
 		self.refresh_device_files()
-
-		# Make both panels equal in size (at least initially)
-		panelsPaned = builder.get_object('panelsPaned')
-		panelW, panelH = panelsPaned.size_request()
-		halfW = panelW / 2
-		panelsPaned.set_position(halfW)
 
 		# And we're done!
 		self.window.show_all()
@@ -227,12 +253,12 @@ class Aafm_GUI:
 	
 	def refresh_host_files(self):
 		self.host_treeViewFile.load_data(self.dir_scan_host(self.host_cwd))
-		self.hostFrame.set_label('%s:%s' % (self.hostName, self.host_cwd))
+		self.hostFrame.set_label(self.host_cwd)
 
 
 	def refresh_device_files(self):
 		self.device_treeViewFile.load_data(self.dir_scan_device(self.device_cwd))
-		self.deviceFrame.set_label('%s:%s' % ('device', self.device_cwd))
+		self.deviceFrame.set_label(self.device_cwd)
 
 
 	def get_treeviewfile_selected(self, treeviewfile):
@@ -420,13 +446,6 @@ class Aafm_GUI:
 			})
 
 		return output
-
-
-	def on_toggle_hidden(self, widget):
-		self.showHidden = widget.get_active()
-
-		self.refresh_host_files()
-		self.refresh_device_files()
 
 	def on_host_tree_view_contextual_menu(self, widget, event):
 		if event.button == 3: # Right click
@@ -861,6 +880,104 @@ class Aafm_GUI:
 
 		yield False
 
+	def on_toggle_host_start_dir_last(self, widget):
+		self.startDirHost = 'last'
+
+	def on_toggle_host_start_dir_specific(self, widget):
+		self.startDirHost = 'specific'
+
+	def on_change_host_start_dir_path(self, widget):
+		self.startDirHostPath = widget.get_text()
+
+	def on_toggle_device_start_dir_last(self, widget):
+		self.startDirDevice = 'last'
+
+	def on_toggle_device_start_dir_specific(self, widget):
+		self.startDirDevice = 'specific'
+
+	def on_change_device_start_dir_path(self, widget):
+		self.startDirDevicePath = widget.get_text()
+
+	def on_toggle_hidden(self, widget):
+		self.showHidden = widget.get_active()
+
+		self.refresh_host_files()
+		self.refresh_device_files()
+
+	def on_toggle_modified(self, widget):
+		self.showModified = widget.get_active()
+
+	def on_toggle_permissions(self, widget):
+		self.showPermissions = widget.get_active()
+
+	def on_toggle_owner(self, widget):
+		self.showOwner = widget.get_active()
+
+	def on_toggle_group(self, widget):
+		self.showGroup = widget.get_active()
+
+	def open_prefs(self, widget, data=None):
+		if self.window_prefs is not None:
+			return False # The window is already showing
+
+		# Build preferences window from XML
+		builder_prefs = gtk.Builder()
+		builder_prefs.add_from_file(os.path.join(self.basedir, "data/glade/preferences.xml"))
+		builder_prefs.connect_signals({ "on_window_destroy" : self.destroy_prefs })
+
+		hostDefaultLastDir = builder_prefs.get_object('hostDefaultLastDir')
+		hostDefaultSpecificDir = builder_prefs.get_object('hostDefaultSpecificDir')
+		deviceDefaultLastDir = builder_prefs.get_object('deviceDefaultLastDir')
+		deviceDefaultSpecificDir = builder_prefs.get_object('deviceDefaultSpecificDir')
+
+		if self.startDirHost == 'last':
+			hostDefaultLastDir.set_active(True)
+			hostDefaultSpecificDir.set_active(False)
+		else:
+			hostDefaultSpecificDir.set_active(True)
+			hostDefaultLastDir.set_active(False)
+
+		if self.startDirDevice == 'last':
+			deviceDefaultLastDir.set_active(True)
+			deviceDefaultSpecificDir.set_active(False)
+		else:
+			deviceDefaultSpecificDir.set_active(True)
+			deviceDefaultLastDir.set_active(False)
+
+		hostDefaultLastDir.connect('toggled', self.on_toggle_host_start_dir_last)
+		hostDefaultSpecificDir.connect('toggled', self.on_toggle_host_start_dir_specific)
+		deviceDefaultLastDir.connect('toggled', self.on_toggle_device_start_dir_last)
+		deviceDefaultSpecificDir.connect('toggled', self.on_toggle_device_start_dir_specific)
+
+		hostDefaultSpecificDirPath = builder_prefs.get_object('hostDefaultSpecificDirPath')
+		hostDefaultSpecificDirPath.set_text(self.startDirHostPath)
+		hostDefaultSpecificDirPath.connect('changed', self.on_change_host_start_dir_path)
+
+		deviceDefaultSpecificDirPath = builder_prefs.get_object('deviceDefaultSpecificDirPath')
+		deviceDefaultSpecificDirPath.set_text(self.startDirDevicePath)
+		deviceDefaultSpecificDirPath.connect('changed', self.on_change_device_start_dir_path)
+
+		showModified = builder_prefs.get_object('showModified')
+		showModified.set_active(self.showModified)
+		showModified.connect('toggled', self.on_toggle_modified)
+
+		showPermissions = builder_prefs.get_object('showPermissions')
+		showPermissions.set_active(self.showPermissions)
+		showPermissions.connect('toggled', self.on_toggle_permissions)
+
+		showOwner = builder_prefs.get_object('showOwner')
+		showOwner.set_active(self.showOwner)
+		showOwner.connect('toggled', self.on_toggle_owner)
+
+		showGroup = builder_prefs.get_object('showGroup')
+		showGroup.set_active(self.showGroup)
+		showGroup.connect('toggled', self.on_toggle_group)
+
+		self.window_prefs = builder_prefs.get_object("window")
+		self.window_prefs.set_icon_from_file('./data/icons/aafm.svg')
+
+		self.window_prefs.show_all()
+
 	def write_settings_file(self):
 		try:
 			with open(self.config_file_loc, 'w') as config_file:
@@ -870,6 +987,18 @@ class Aafm_GUI:
 			return False
 
 	def write_settings(self):
+		self.config.set('aafm', 'lastdir_host', self.host_cwd)
+		self.config.set('aafm', 'lastdir_device', self.device_cwd)
+		self.config.set('aafm', 'startdir_host', self.startDirHost)
+		self.config.set('aafm', 'startdir_host_path', self.startDirHostPath)
+		self.config.set('aafm', 'startdir_device', self.startDirDevice)
+		self.config.set('aafm', 'startdir_device_path', self.startDirDevicePath)
+		self.config.set('aafm', 'show_hidden', 'yes' if self.showHidden else 'no')
+		self.config.set('aafm', 'show_modified', 'yes' if self.showModified else 'no')
+		self.config.set('aafm', 'show_permissions', 'yes' if self.showPermissions else 'no')
+		self.config.set('aafm', 'show_owner', 'yes' if self.showOwner else 'no')
+		self.config.set('aafm', 'show_group', 'yes' if self.showGroup else 'no')
+
 		# Set config location to home directory if we couldn't find a working path
 		if self.config_file_loc == "":
 			self.config_file_loc = self.config_file_loc_default
@@ -883,10 +1012,12 @@ class Aafm_GUI:
 		self.destroy(widget, data)
 
 
+	def destroy_prefs(self, widget, data=None):
+		self.window_prefs = None
+
 	def destroy(self, widget, data=None):
 		self.write_settings()
 		gtk.main_quit()
-
 
 	def main(self):
 		gtk.main()
@@ -895,3 +1026,4 @@ class Aafm_GUI:
 if __name__ == '__main__':
 	gui = Aafm_GUI()
 	gui.main()
+
