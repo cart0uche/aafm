@@ -1,6 +1,18 @@
 #!/usr/bin/env python2
 
-import pygtk
+try:
+	import pygtk
+except ImportError:
+	print('The Python module pyGTK is not installed.  Please install it.')
+
+	try:
+		import Tkinter
+		Tkinter.Tk().withdraw()
+		import tkMessageBox
+		tkMessageBox.showinfo("Unable to start aafm", "The Python module pyGTK is not installed.  Please see the README file for instructions on how to download and install pyGTK.")
+	except:
+		pass
+
 pygtk.require('2.0')
 import gtk
 import gobject
@@ -213,7 +225,10 @@ class Aafm_GUI:
 		self.progress_bar = builder.get_object('progressBar')
 
 		# Some more subtle details...
-		self.window.set_icon_from_file(os.path.join(self.basedir, "data/icons/aafm.svg"))
+		try:
+			self.window.set_icon_from_file(os.path.join(self.basedir, "data/icons/aafm.svg"))
+		except:
+			self.window.set_icon_from_file(os.path.join(self.basedir, "data/icons/aafm.png"))
 		#self.adb = 'adb'
 
 		self.refresh_host_files()
@@ -974,7 +989,10 @@ class Aafm_GUI:
 		showGroup.connect('toggled', self.on_toggle_group)
 
 		self.window_prefs = builder_prefs.get_object("window")
-		self.window_prefs.set_icon_from_file(os.path.join(self.basedir, "data/icons/aafm.svg"))
+		try:
+			self.window_prefs.set_icon_from_file(os.path.join(self.basedir, "data/icons/aafm.svg"))
+		except:
+			self.window_prefs.set_icon_from_file(os.path.join(self.basedir, "data/icons/aafm.png"))
 
 		self.window_prefs.show_all()
 

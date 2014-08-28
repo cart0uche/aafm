@@ -9,7 +9,9 @@ An Android ADB-based file manager [created](https://github.com/sole/aafm) by [So
 
 ## Installing ##
 
-To install **aafm** on Debian or Ubuntu, run the following in a terminal:
+#### Debian/Ubuntu ####
+
+Execute the following in a terminal:
 
 ```
 sudo add-apt-repository ppa:tslocum/aafm
@@ -17,7 +19,24 @@ sudo apt-get update
 sudo apt-get install aafm
 ```
 
-**Note:** If you run into any problems using this package, please submit an issue including a log of apt's output.
+**Note:** If you run into any problems, please submit an issue including a log of apt's output.
+
+#### Mac ####
+
+First, download and install [pyGTK for Mac](http://sourceforge.net/projects/macpkg/files/PyGTK/2.24.0/PyGTK.pkg/download).  Then execute the following in a terminal:
+
+```
+git clone git://github.com/tslocum/aafm.git ~/Applications/aafm
+cd ~/Applications/aafm
+python setup.py install
+sudo cp -R aafm.app /Applications/
+```
+
+**Note:** Unlike the Debian/Ubuntu package, if you don't have ADB installed yet, you'll need to install it yourself.  See the **Install the Android SDK** instructions below.
+
+#### Windows ####
+
+Pre-built executables are coming soon.  For now, download the source package and execute **aafm-gui.py** directly from the **src** folder.
 
 ## Building ##
 
