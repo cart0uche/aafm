@@ -23,24 +23,33 @@ class Aafm:
 		self._path_join_function = pathmodule.join
 		self._path_normpath_function = pathmodule.normpath
 		self._path_basename_function = pathmodule.basename
+
+		self.set_device('')
 		
+	def set_device(self, device):
+		self.device = device
+		self.device_cwd = self.aafmgui.device_cwd_default
+		self.aafmgui.device_cwd = self.aafmgui.device_cwd_default
 		self.busybox = False
-		self.probe_for_busybox()
-		
+
+		if self.device != '':
+			print 'Chose device %s' % device
+			self.probe_for_busybox()
+		else:
+			print 'Reset chosen device'
 
 	def execute(self, command):
-		print "EXECUTE=", command
-		process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).stdout
+		print 'ADB command: %s' % command
+		p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		stdout_data, stderr_data = p.communicate()
 
-		lines = []
+		if 'error: device not found' in stderr_data:
+			print 'Device disconnected'
+			self.set_device('')
+			self.aafmgui.refresh_devices_list()
+			self.aafmgui.refresh_device_files()
 
-		while True:
-			line = process.readline()
-			
-			if not line:
-				break
-
-			lines.append(line)
+		lines = stdout_data.splitlines()
 		
 		return lines
 
@@ -57,17 +66,58 @@ class Aafm:
 		return self.parse_device_list( self.device_list_files( self._path_join_function(self.device_cwd, '') ) )
 
 	def probe_for_busybox(self):
-		command = '%s shell ls --help' % (self.adb)
+		command = '%s -s %s shell ls --help' % (self.adb, self.device)
 		lines = self.execute(command)
 		if len(lines) > 0 and lines[0].startswith('BusyBox'):
 			print "BusyBox ls detected"
 			self.busybox = True
 
+	def get_device_serial(self, device, raw=False):
+		device_split = re.split('\s+', device)
+		if len(device_split) > 0:
+			if raw:
+				return device_split[0].strip()
+			else:
+				return device_split[-1].strip()
+
+		return ''
+
+	def get_device_info(self, device, info_type):
+		if info_type == 'model':
+			prop = 'ro.product.model'
+
+		lines = self.execute('%s -s %s shell getprop %s' % (self.adb, device, prop))
+		for line in lines:
+			if line.strip() != "":
+				return line.strip()
+
+		return ''
+
+	def list_devices(self):
+		devices = []
+
+		lines = self.execute('%s devices' % (self.adb))
+		for line in lines:
+			line = line.strip()
+			if not line.startswith('List of devices') and line != '':
+				serial = self.get_device_serial(line, True)
+				if serial != '':
+					model = self.get_device_info(serial, 'model')
+
+					if model != '':
+						device_label = '%s  %s' % (model, serial)
+					else:
+						device_label = serial
+
+					devices.append(device_label)
+
+		return devices
+
 	def device_list_files(self, device_dir):
 		if self.busybox:
-			command = '%s shell ls -l -A -e --color=never %s' % (self.adb, self.device_escape_path( device_dir))
+			command = '%s -s %s shell ls -l -A -e --color=never %s' % (self.adb, self.device, self.device_escape_path( device_dir))
 		else:
-			command = '%s shell ls -l -a %s' % (self.adb, self.device_escape_path(device_dir))
+			command = '%s -s %s shell ls -l -a %s' % (self.adb, self.device, self.device_escape_path(device_dir))
 		lines = self.execute(command)
 		return lines
 
@@ -148,7 +198,7 @@ class Aafm:
 		pattern = re.compile(r'(\w|_|-)+')
 		base = os.path.basename(directory)
 		if pattern.match(base):
-			self.execute( '%s shell mkdir %s' % (self.adb, self.device_escape_path( directory )) )
+			self.execute( '%s -s %s shell mkdir %s' % (self.adb, self.device, self.device_escape_path( directory )) )
 		else:
 			print 'invalid directory name', directory
 	
@@ -163,10 +213,10 @@ class Aafm:
 				self.device_delete_item(entry_full_path)
 
 			# finally delete the directory itself
-			self.execute('%s shell rmdir %s' % (self.adb, self.device_escape_path(path)))
+			self.execute('%s -s %s shell rmdir %s' % (self.adb, self.device, self.device_escape_path(path)))
 
 		else:
-			self.execute('%s shell rm %s' % (self.adb, self.device_escape_path(path)))
+			self.execute('%s -s %s shell rm %s' % (self.adb, self.device, self.device_escape_path(path)))
 
 
 	# See  __init__ for _path_join_function definition
@@ -210,14 +260,14 @@ class Aafm:
 				self.copy_to_host(os.path.join(device_file, filename), final_host_directory)
 		else:
 			host_file = os.path.join(host_directory, os.path.basename(device_file))
-			self.execute('%s pull %s "%s"' % (self.adb, self.device_escape_path( device_file ), host_file))
+			self.execute('%s -s %s pull %s "%s"' % (self.adb, self.device, self.device_escape_path( device_file ), host_file))
 	
 	
 	def copy_to_device(self, host_file, device_directory):
 
 		if os.path.isfile( host_file ):
 
-			self.execute('%s push "%s" %s' % (self.adb, host_file, self.device_escape_path( device_directory ) ) )
+			self.execute('%s -s %s push "%s" %s' % (self.adb, self.device, host_file, self.device_escape_path( device_directory ) ) )
 
 		else:
 
@@ -256,4 +306,4 @@ class Aafm:
 			print 'Filename %s already exists' % filename
 			return
 
-		self.execute('%s shell mv %s %s' % (self.adb, self.device_escape_path(device_src_path), self.device_escape_path(device_dst_path)))
+		self.execute('%s -s %s shell mv %s %s' % (self.adb, self.device, self.device_escape_path(device_src_path), self.device_escape_path(device_dst_path)))

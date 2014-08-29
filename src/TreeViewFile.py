@@ -107,9 +107,11 @@ class TreeViewFile:
 	def get_tree(self):
 		return self.tree_view
 
+	def clear_data(self):
+		self.tree_store.clear()
 
 	def load_data(self, data):
-		self.tree_store.clear()
+		self.clear_data()
 
 		for row in data:
 			if row['size'] == 0:

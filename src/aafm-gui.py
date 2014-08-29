@@ -3,7 +3,7 @@
 try:
 	import pygtk
 except ImportError:
-	print('The Python module pyGTK is not installed.  Please install it.')
+	print 'The Python module pyGTK is not installed.  Please install it.'
 
 	try:
 		import Tkinter
@@ -17,6 +17,7 @@ pygtk.require('2.0')
 import gtk
 import gobject
 import os
+import re
 import shutil
 import socket
 import datetime
@@ -48,6 +49,8 @@ class Aafm_GUI:
 	XDS_FILENAME = 'whatever.txt'
 
 	def __init__(self):
+
+		self.done = True
 
 		# Read settings
 		self.config = ConfigParser.SafeConfigParser({'lastdir_host': '', 'lastdir_device': '',
@@ -94,12 +97,14 @@ class Aafm_GUI:
 			self.host_cwd = os.path.expanduser("~")
 
 		if self.startDirDevice == 'last':
-			self.device_cwd = self.config.get("aafm", "lastdir_device")
+			self.device_cwd_default = self.config.get("aafm", "lastdir_device")
 		else:
-			self.device_cwd = self.startDirDevicePath
+			self.device_cwd_default = self.startDirDevicePath
 
-		if self.device_cwd == '':
-			self.device_cwd = '/mnt/sdcard'
+		if self.device_cwd_default == '':
+			self.device_cwd_default = '/mnt/sdcard'
+
+		self.device_cwd = self.device_cwd_default
 
 		# The super core
 		self.aafm = Aafm('adb', self.host_cwd, self.device_cwd, self)
@@ -152,6 +157,9 @@ class Aafm_GUI:
 		showHidden = builder.get_object('showHidden')
 		showHidden.set_active(self.showHidden)
 		showHidden.connect('toggled', self.on_toggle_hidden)
+
+		# Progress bar
+		self.progress_bar = builder.get_object('progressBar')
 
 		# Host and device TreeViews
 		
@@ -221,8 +229,24 @@ class Aafm_GUI:
 		
 		self.deviceFrame = deviceFrame
 
-		# Progress bar
-		self.progress_bar = builder.get_object('progressBar')
+		# Devices list refresh button
+		refreshDevicesList = builder.get_object('refreshDevicesList')
+		refreshDevicesList.connect('clicked', self.on_clicked_refresh_devices)
+
+		# Devices list combobox
+		self.devicesList = builder.get_object('devicesList')
+		self.devices_list_store = gtk.ListStore(gobject.TYPE_STRING)
+		self.refresh_devices_list()
+		self.devicesList.set_model(self.devices_list_store)
+
+		cell = gtk.CellRendererText()
+		self.devicesList.pack_start(cell, True)
+		self.devicesList.add_attribute(cell, "text", 0)
+
+		if len(self.devices_list) > 0:
+			self.aafm.set_device(self.aafm.get_device_serial(self.devices_list[0]))
+
+		self.devicesList.connect('changed', self.on_change_device)
 
 		# Some more subtle details...
 		try:
@@ -272,9 +296,11 @@ class Aafm_GUI:
 
 
 	def refresh_device_files(self):
-		self.device_treeViewFile.load_data(self.dir_scan_device(self.device_cwd))
-		self.deviceFrame.set_label(self.device_cwd)
-
+		if self.aafm.device != '':
+			self.device_treeViewFile.load_data(self.dir_scan_device(self.device_cwd))
+			self.deviceFrame.set_label(self.device_cwd)
+		else:
+			self.device_treeViewFile.clear_data()
 
 	def get_treeviewfile_selected(self, treeviewfile):
 		values = []
@@ -598,8 +624,6 @@ class Aafm_GUI:
 				full_item_path = self.aafm.device_path_join(self.device_cwd, item)
 				self.aafm.device_delete_item(full_item_path)
 				self.refresh_device_files()
-		else:
-			print('no no')
 
 
 	def dialog_delete_confirmation(self, items):
@@ -749,13 +773,17 @@ class Aafm_GUI:
 			self.progress_bar.pulse()
 		else:
 			self.progress_bar.set_fraction(value)
-
 			self.progress_bar.set_text("%d%%" % (value * 100))
 
 		if value >= 1:
 			self.progress_bar.set_text("Done")
 			self.progress_bar.set_fraction(0)
+			self.done = True
 
+			if len(self.devices_list) > 0:
+				self.devicesList.set_sensitive(True)
+		else:
+			self.done = False
 
 	def on_host_drag_data_get(self, widget, context, selection, target_type, time):
 		data = '\n'.join(['file://' + urllib.quote(os.path.join(self.host_cwd, item['filename'])) for item in self.get_host_selected_files()])
@@ -812,7 +840,7 @@ class Aafm_GUI:
 
 				self.process_queue()
 			else:
-				print("ERROR: Destination doesn't start with file://?!!?")
+				print "ERROR: Destination doesn't start with file://?!!?"
 
 
 		else:
@@ -895,6 +923,45 @@ class Aafm_GUI:
 
 		yield False
 
+	def refresh_devices_list(self):
+		if not hasattr(self, 'aafm'):
+			return
+
+		self.devices_list = self.aafm.list_devices()
+
+		self.devices_list_store.clear()
+		new_active = 0
+		if len(self.devices_list) > 0:
+			if self.aafm.device == '':
+				self.aafm.set_device(self.aafm.get_device_serial(self.devices_list[0]))
+
+			i = 0
+			for device in self.devices_list:
+				self.devices_list_store.append([device])
+
+				if self.aafm.get_device_serial(device) == self.aafm.device:
+					new_active = i
+
+				i += 1
+
+			if self.done:
+				self.devicesList.set_sensitive(True)
+		else:
+			self.devicesList.set_sensitive(False)
+			self.devices_list_store.append(['No devices found'])
+			self.device_treeViewFile.clear_data()
+
+		self.devicesList.set_active(new_active)
+
+	def on_change_device(self, widget):
+		if widget.get_active() >= 0 and len(self.devices_list) >= (widget.get_active() + 1):
+			serial = self.aafm.get_device_serial(self.devices_list[widget.get_active()])
+			if serial != '' and self.aafm.device != serial:
+				self.aafm.set_device(serial)
+				self.device_cwd = self.device_cwd_default
+				self.aafm.set_device_cwd(self.device_cwd)
+				self.refresh_device_files()
+
 	def on_toggle_host_start_dir_last(self, widget):
 		self.startDirHost = 'last'
 
@@ -918,6 +985,9 @@ class Aafm_GUI:
 
 		self.refresh_host_files()
 		self.refresh_device_files()
+
+	def on_clicked_refresh_devices(self, widget):
+		self.refresh_devices_list()
 
 	def on_toggle_modified(self, widget):
 		self.showModified = widget.get_active()
