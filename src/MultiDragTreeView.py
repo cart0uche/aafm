@@ -1,6 +1,8 @@
 import gtk
 import gobject
+
 import pango
+
 
 """ This class is taken (with some edits) from the excellent QuodLibet project:
 	code.google.com/p/quodlibet/
@@ -8,6 +10,7 @@ import pango
 	QuodLibet is licensed under the GPL v2 License:
 	http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 """
+
 
 class MultiDragTreeView(gtk.TreeView):
     """TreeView with multirow drag support:
@@ -29,12 +32,14 @@ class MultiDragTreeView(gtk.TreeView):
 
     def __block_selection(self, event):
         x, y = map(int, [event.x, event.y])
-        try: path, col, cellx, celly = self.get_path_at_pos(x, y)
-        except TypeError: return True
+        try:
+            path, col, cellx, celly = self.get_path_at_pos(x, y)
+        except TypeError:
+            return True
         self.grab_focus()
         selection = self.get_selection()
         if ((selection.path_is_selected(path)
-            and not (event.state & (gtk.gdk.CONTROL_MASK|gtk.gdk.SHIFT_MASK)))):
+             and not (event.state & (gtk.gdk.CONTROL_MASK | gtk.gdk.SHIFT_MASK)))):
             self.__pending_event = [x, y]
             selection.set_select_function(lambda *args: False)
         elif event.type == gtk.gdk.BUTTON_PRESS:
@@ -49,8 +54,10 @@ class MultiDragTreeView(gtk.TreeView):
             self.__pending_event = None
             if oldevent != [event.x, event.y]: return True
             x, y = map(int, [event.x, event.y])
-            try: path, col, cellx, celly = self.get_path_at_pos(x, y)
-            except TypeError: return True
+            try:
+                path, col, cellx, celly = self.get_path_at_pos(x, y)
+            except TypeError:
+                return True
             self.set_cursor(path, col, 0)
 
     def __begin(self, ctx):
@@ -59,7 +66,7 @@ class MultiDragTreeView(gtk.TreeView):
         if paths:
             icons = map(self.create_row_drag_icon, paths[:MAX])
             height = (
-                sum(map(lambda s: s.get_size()[1], icons))-2*len(icons))+2
+                         sum(map(lambda s: s.get_size()[1], icons)) - 2 * len(icons)) + 2
             width = max(map(lambda s: s.get_size()[0], icons))
             final = gtk.gdk.Pixmap(icons[0], width, height)
             gc = gtk.gdk.GC(final)
@@ -68,25 +75,25 @@ class MultiDragTreeView(gtk.TreeView):
             count_y = 1
             for icon in icons:
                 w, h = icon.get_size()
-                final.draw_drawable(gc, icon, 1, 1, 1, count_y, w-2, h-2)
+                final.draw_drawable(gc, icon, 1, 1, 1, count_y, w - 2, h - 2)
                 count_y += h - 2
             if len(paths) > MAX:
                 count_y -= h - 2
                 bgc = gtk.gdk.GC(final)
                 bgc.copy(self.style.base_gc[gtk.STATE_NORMAL])
-                final.draw_rectangle(bgc, True, 1, count_y, w-2, h-2)
-				# WARNING -- modified from original!
-				# Not using i18n so taking out the initial underscore for translations ;)
-                more = ("and %d more...") % (len(paths) - MAX + 1) # _("and %d more...") % (len(paths) - MAX + 1)
+                final.draw_rectangle(bgc, True, 1, count_y, w - 2, h - 2)
+                # WARNING -- modified from original!
+                # Not using i18n so taking out the initial underscore for translations ;)
+                more = ("and %d more...") % (len(paths) - MAX + 1)  # _("and %d more...") % (len(paths) - MAX + 1)
                 layout = self.create_pango_layout(more)
                 attrs = pango.AttrList()
                 attrs.insert(pango.AttrStyle(pango.STYLE_ITALIC, 0, len(more)))
                 layout.set_attributes(attrs)
                 layout.set_width(pango.SCALE * (w - 2))
                 lw, lh = layout.get_pixel_size()
-                final.draw_layout(gc, (w-lw)//2, count_y + (h-lh)//2, layout)
+                final.draw_layout(gc, (w - lw) // 2, count_y + (h - lh) // 2, layout)
 
-            final.draw_rectangle(gc, False, 0, 0, width-1, height-1)
+            final.draw_rectangle(gc, False, 0, 0, width - 1, height - 1)
             self.drag_source_set_icon(final.get_colormap(), final)
         else:
             gobject.idle_add(ctx.drag_abort, gtk.get_current_event_time())

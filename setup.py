@@ -3,7 +3,7 @@
 import sys
 from distutils.core import setup
 
-prefix=sys.prefix + '/bin'
+prefix = sys.prefix + '/bin'
 
 setup(name='aafm',
       version='0.5.1',
@@ -23,5 +23,5 @@ setup(name='aafm',
                   ('/usr/share/icons/hicolor/256x256/apps', ['icon/256/aafm.png']),
                   ('/usr/share/icons/hicolor/scalable/apps', ['icon/scalable/aafm.svg']),
                   ('/usr/share/applications', ['aafm.desktop']),
-                  (prefix , ['aafm'])]
-      )
+                  (prefix, ['aafm'])]
+)
