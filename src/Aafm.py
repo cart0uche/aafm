@@ -11,6 +11,8 @@ class Aafm:
         self.host_cwd = host_cwd
         self.device_cwd = device_cwd
         self.aafmgui = aafmgui
+        self.device = ''
+        self.busybox = False
 
         # The Android device should always use POSIX path style separators (/),
         # so we can happily use os.path.join when running on Linux (which is POSIX)
@@ -35,12 +37,13 @@ class Aafm:
 
         if self.device != '':
             print 'Chose device %s' % device
+            self.aafmgui.lastDeviceSerial = device
             self.probe_for_busybox()
         else:
             print 'Reset chosen device'
 
     def execute(self, command):
-        print 'ADB command: %s' % command
+        print '  ' + command
         p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout_data, stderr_data = p.communicate()
 
@@ -48,7 +51,7 @@ class Aafm:
             print 'Device disconnected'
             self.set_device('')
             self.aafmgui.refresh_devices_list()
-            self.aafmgui.refresh_device_files()
+            self.aafmgui.reset_device()
 
         lines = stdout_data.splitlines()
 
@@ -90,6 +93,7 @@ class Aafm:
         lines = self.execute('%s -s %s shell getprop %s' % (self.adb, device, prop))
         for line in lines:
             if line.strip() != "":
+                print 'Got device info (%s) %s' % (info_type, line.strip())
                 return line.strip()
 
         return ''
@@ -97,7 +101,7 @@ class Aafm:
     def list_devices(self):
         devices = []
 
-        lines = self.execute('%s devices' % (self.adb))
+        lines = self.execute('%s devices' % self.adb)
         for line in lines:
             line = line.strip()
             if not line.startswith('List of devices') and line != '':
@@ -117,7 +121,7 @@ class Aafm:
     def device_list_files(self, device_dir):
         if self.busybox:
             command = '%s -s %s shell ls -l -A -e --color=never %s' % (
-            self.adb, self.device, self.device_escape_path(device_dir))
+                self.adb, self.device, self.device_escape_path(device_dir))
         else:
             command = '%s -s %s shell ls -l -a %s' % (self.adb, self.device, self.device_escape_path(device_dir))
         lines = self.execute(command)
@@ -159,12 +163,12 @@ class Aafm:
                     is_directory = self.is_device_file_a_directory(target)
 
                 entries[filename] = {
-                'is_directory': is_directory,
-                'size': fsize,
-                'timestamp': timestamp,
-                'permissions': permissions,
-                'owner': owner,
-                'group': group
+                    'is_directory': is_directory,
+                    'size': fsize,
+                    'timestamp': timestamp,
+                    'permissions': permissions,
+                    'owner': owner,
+                    'group': group
                 }
 
             elif "such file or directory":  # Non-existent directory
@@ -274,7 +278,7 @@ class Aafm:
         if os.path.isfile(host_file):
 
             self.execute('%s -s %s push "%s" %s' % (
-            self.adb, self.device, host_file, self.device_escape_path(device_directory) ))
+                self.adb, self.device, host_file, self.device_escape_path(device_directory) ))
 
         else:
 
@@ -316,4 +320,4 @@ class Aafm:
             return
 
         self.execute('%s -s %s shell mv %s %s' % (
-        self.adb, self.device, self.device_escape_path(device_src_path), self.device_escape_path(device_dst_path)))
+            self.adb, self.device, self.device_escape_path(device_src_path), self.device_escape_path(device_dst_path)))

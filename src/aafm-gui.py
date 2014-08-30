@@ -3,7 +3,7 @@
 try:
     import pygtk
 except ImportError:
-    print 'The Python module pyGTK is not installed.  Please install it.'
+    print 'The Python module pyGTK is not installed.  Please install it.  See the README for instructions.'
 
     try:
         import Tkinter
@@ -19,8 +19,9 @@ except ImportError:
 pygtk.require('2.0')
 import gtk
 import gobject
+import glib
 import os
-import re
+import string
 import shutil
 import socket
 import datetime
@@ -31,8 +32,6 @@ import urllib
 import ConfigParser
 
 if os.name == 'nt':
-    import win32api
-    import win32con
     import win32security
 
 from TreeViewFile import TreeViewFile
@@ -53,6 +52,9 @@ class Aafm_GUI:
     def __init__(self):
 
         self.done = True
+        self.devices_list = []
+        self.showing_notice = False
+        self.progress_value = None
 
         # Read settings
         self.config = ConfigParser.SafeConfigParser({'lastdir_host': '', 'lastdir_device': '',
@@ -60,7 +62,8 @@ class Aafm_GUI:
                                                      'startdir_device': 'last', 'startdir_device_path': '',
                                                      'show_hidden': 'no', 'show_modified': 'yes',
                                                      'show_permissions': 'no', 'show_owner': 'no',
-                                                     'show_group': 'no'})
+                                                     'show_group': 'no', 'last_serial': '',
+                                                     'last_ip': ''})
         self.config_file_loc = ""
         self.config_file_loc_default = os.path.join(os.path.expanduser("~"), ".aafm")
         for file_loc in os.curdir, os.path.expanduser("~"), os.environ.get("AAFM_CONF"):
@@ -89,6 +92,8 @@ class Aafm_GUI:
         self.showPermissions = (self.config.get("aafm", "show_permissions") == "yes")
         self.showOwner = (self.config.get("aafm", "show_owner") == "yes")
         self.showGroup = (self.config.get("aafm", "show_group") == "yes")
+        self.lastDeviceSerial = self.config.get("aafm", "last_serial")
+        self.lastDeviceIP = self.config.get("aafm", "last_ip")
 
         if self.startDirHost == 'last':
             self.host_cwd = self.config.get("aafm", "lastdir_host")
@@ -233,24 +238,30 @@ class Aafm_GUI:
 
         self.deviceFrame = deviceFrame
 
-        # Devices list refresh button
-        refreshDevicesList = builder.get_object('refreshDevicesList')
-        refreshDevicesList.connect('clicked', self.on_clicked_refresh_devices)
+        # Add device button
+        addDevice = builder.get_object('addDevice')
+        addDevice.connect('clicked', self.on_clicked_add_device)
 
         # Devices list combobox
         self.devicesList = builder.get_object('devicesList')
         self.devices_list_store = gtk.ListStore(gobject.TYPE_STRING)
-        self.refresh_devices_list()
+        self.refresh_devices_list(True, self.lastDeviceSerial)
         self.devicesList.set_model(self.devices_list_store)
 
         cell = gtk.CellRendererText()
         self.devicesList.pack_start(cell, True)
         self.devicesList.add_attribute(cell, "text", 0)
 
-        if len(self.devices_list) > 0:
-            self.aafm.set_device(self.aafm.get_device_serial(self.devices_list[0]))
+        # if self.lastDeviceSerial in self.devices_list:
+        #    self.aafm.set_device(self.lastDeviceSerial)
+        #elif len(self.devices_list) > 0:
+        #    self.aafm.set_device(self.aafm.get_device_serial(self.devices_list[0]))
 
         self.devicesList.connect('changed', self.on_change_device)
+
+        # Devices list refresh button
+        refreshDevicesList = builder.get_object('refreshDevicesList')
+        refreshDevicesList.connect('clicked', self.on_clicked_refresh_devices)
 
         # Some more subtle details...
         try:
@@ -260,7 +271,6 @@ class Aafm_GUI:
             # self.adb = 'adb'
 
         self.refresh_host_files()
-        self.refresh_device_files()
 
         # And we're done!
         self.window.show_all()
@@ -300,6 +310,7 @@ class Aafm_GUI:
 
 
     def refresh_device_files(self):
+        print 'Refreshing device files'
         if self.aafm.device != '':
             self.device_treeViewFile.load_data(self.dir_scan_device(self.device_cwd))
             self.deviceFrame.set_label(self.device_cwd)
@@ -355,13 +366,13 @@ class Aafm_GUI:
         for d in dirs:
             path = os.path.join(directory, d)
             output.append({
-            'directory': True,
-            'name': d,
-            'size': 0,
-            'timestamp': self.format_timestamp(os.path.getmtime(path)),
-            'permissions': self.get_permissions(path),
-            'owner': self.get_owner(path),
-            'group': self.get_group(path)
+                'directory': True,
+                'name': d,
+                'size': 0,
+                'timestamp': self.format_timestamp(os.path.getmtime(path)),
+                'permissions': self.get_permissions(path),
+                'owner': self.get_owner(path),
+                'group': self.get_group(path)
             })
 
         for f in files:
@@ -370,13 +381,13 @@ class Aafm_GUI:
             try:
                 size = self.human_readable_size(os.path.getsize(path))
                 output.append({
-                'directory': False,
-                'name': f,
-                'size': size,
-                'timestamp': self.format_timestamp(os.path.getmtime(path)),
-                'permissions': self.get_permissions(path),
-                'owner': self.get_owner(path),
-                'group': self.get_group(path)
+                    'directory': False,
+                    'name': f,
+                    'size': size,
+                    'timestamp': self.format_timestamp(os.path.getmtime(path)),
+                    'permissions': self.get_permissions(path),
+                    'owner': self.get_owner(path),
+                    'group': self.get_group(path)
                 })
             except OSError:
                 pass
@@ -417,7 +428,7 @@ class Aafm_GUI:
         try:
             user = pwd.getpwuid(uid)[0]
         except KeyError:
-            print ('unknown uid %d for file %s' % (uid, filename))
+            print 'unknown uid %d for file %s' % (uid, filename)
             user = 'unknown'
         return user
 
@@ -433,7 +444,7 @@ class Aafm_GUI:
         try:
             groupname = grp.getgrgid(gid)[0]
         except KeyError:
-            print ('unknown gid %d for file %s' % (gid, filename))
+            print 'unknown gid %d for file %s' % (gid, filename)
             groupname = 'unknown'
         return groupname
 
@@ -473,25 +484,25 @@ class Aafm_GUI:
 
         for d in dirs:
             output.append({
-            'directory': True,
-            'name': d,
-            'size': 0,
-            'timestamp': self.format_timestamp(entries[d]['timestamp']),
-            'permissions': entries[d]['permissions'],
-            'owner': entries[d]['owner'],
-            'group': entries[d]['group']
+                'directory': True,
+                'name': d,
+                'size': 0,
+                'timestamp': self.format_timestamp(entries[d]['timestamp']),
+                'permissions': entries[d]['permissions'],
+                'owner': entries[d]['owner'],
+                'group': entries[d]['group']
             })
 
         for f in files:
             size = self.human_readable_size(int(entries[f]['size']))
             output.append({
-            'directory': False,
-            'name': f,
-            'size': size,
-            'timestamp': self.format_timestamp(entries[f]['timestamp']),
-            'permissions': entries[f]['permissions'],
-            'owner': entries[f]['owner'],
-            'group': entries[f]['group']
+                'directory': False,
+                'name': f,
+                'size': size,
+                'timestamp': self.format_timestamp(entries[f]['timestamp']),
+                'permissions': entries[f]['permissions'],
+                'owner': entries[f]['owner'],
+                'group': entries[f]['group']
             })
 
         return output
@@ -502,11 +513,11 @@ class Aafm_GUI:
             builder.add_from_file(os.path.join(self.basedir, 'data/glade/menu_contextual_host.xml'))
             menu = builder.get_object('menu')
             builder.connect_signals({
-            'on_menuHostCopyToDevice_activate': self.on_host_copy_to_device_callback,
-            'on_menuHostCreateDirectory_activate': self.on_host_create_directory_callback,
-            'on_menuHostRefresh_activate': self.on_host_refresh_callback,
-            'on_menuHostDeleteItem_activate': self.on_host_delete_item_callback,
-            'on_menuHostRenameItem_activate': self.on_host_rename_item_callback
+                'on_menuHostCopyToDevice_activate': self.on_host_copy_to_device_callback,
+                'on_menuHostCreateDirectory_activate': self.on_host_create_directory_callback,
+                'on_menuHostRefresh_activate': self.on_host_refresh_callback,
+                'on_menuHostDeleteItem_activate': self.on_host_delete_item_callback,
+                'on_menuHostRenameItem_activate': self.on_host_rename_item_callback
             })
 
             # Ensure only right options are available
@@ -592,11 +603,11 @@ class Aafm_GUI:
             builder.add_from_file(os.path.join(self.basedir, "data/glade/menu_contextual_device.xml"))
             menu = builder.get_object("menu")
             builder.connect_signals({
-            'on_menuDeviceDeleteItem_activate': self.on_device_delete_item_callback,
-            'on_menuDeviceCreateDirectory_activate': self.on_device_create_directory_callback,
-            'on_menuDeviceRefresh_activate': self.on_device_refresh_callback,
-            'on_menuDeviceCopyToComputer_activate': self.on_device_copy_to_computer_callback,
-            'on_menuDeviceRenameItem_activate': self.on_device_rename_item_callback
+                'on_menuDeviceDeleteItem_activate': self.on_device_delete_item_callback,
+                'on_menuDeviceCreateDirectory_activate': self.on_device_create_directory_callback,
+                'on_menuDeviceRefresh_activate': self.on_device_refresh_callback,
+                'on_menuDeviceCopyToComputer_activate': self.on_device_copy_to_computer_callback,
+                'on_menuDeviceRenameItem_activate': self.on_device_rename_item_callback
             })
 
             # Ensure only right options are available
@@ -773,18 +784,32 @@ class Aafm_GUI:
         else:
             return None
 
+    def show_notice(self, notice, flash=False):
+        self.showing_notice = True
+
+        if flash:
+            self.progress_bar.set_text('!' * 7)
+            glib.timeout_add(1000, lambda: self.show_notice(notice))
+        else:
+            self.progress_bar.set_text(notice)
+
+    def clear_notice(self):
+        self.showing_notice = False
+        self.update_progress(self.progress_value)
 
     def update_progress(self, value=None):
         if value is None:
             self.progress_bar.set_fraction(0)
-            self.progress_bar.set_text("Ready")
-            self.progress_bar.pulse()
+            if not self.showing_notice:
+                self.progress_bar.set_text("Ready")
         else:
             self.progress_bar.set_fraction(value)
-            self.progress_bar.set_text("%d%%" % (value * 100))
+            if not self.showing_notice:
+                self.progress_bar.set_text("%d%%" % (value * 100))
 
         if value >= 1:
-            self.progress_bar.set_text("Done")
+            if not self.showing_notice:
+                self.progress_bar.set_text("Done")
             self.progress_bar.set_fraction(0)
             self.done = True
 
@@ -792,6 +817,8 @@ class Aafm_GUI:
                 self.devicesList.set_sensitive(True)
         else:
             self.done = False
+
+        self.progress_value = value
 
     def on_host_drag_data_get(self, widget, context, selection, target_type, time):
         data = '\n'.join(['file://' + urllib.quote(os.path.join(self.host_cwd, item['filename'])) for item in
@@ -935,7 +962,7 @@ class Aafm_GUI:
 
         yield False
 
-    def refresh_devices_list(self):
+    def refresh_devices_list(self, refreshFiles=False, defaultDevice=''):
         if not hasattr(self, 'aafm'):
             return
 
@@ -944,15 +971,21 @@ class Aafm_GUI:
         self.devices_list_store.clear()
         new_active = 0
         if len(self.devices_list) > 0:
-            if self.aafm.device == '':
+            if defaultDevice != '':
+                self.aafm.set_device(defaultDevice)
+            elif self.aafm.device == '':
                 self.aafm.set_device(self.aafm.get_device_serial(self.devices_list[0]))
 
             i = 0
             for device in self.devices_list:
                 self.devices_list_store.append([device])
 
-                if self.aafm.get_device_serial(device) == self.aafm.device:
-                    new_active = i
+                if defaultDevice == '':
+                    if self.aafm.get_device_serial(device) == self.aafm.device:
+                        new_active = i
+                else:
+                    if self.aafm.get_device_serial(device) == defaultDevice:
+                        new_active = i
 
                 i += 1
 
@@ -964,6 +997,15 @@ class Aafm_GUI:
             self.device_treeViewFile.clear_data()
 
         self.devicesList.set_active(new_active)
+
+        if refreshFiles:
+            glib.timeout_add(750, self.refresh_device_files)
+
+    def reset_device(self):
+        if len(self.devices_list) > 0:
+            self.show_notice('Lost connection to device', True)
+            glib.timeout_add(750, self.refresh_device_files)
+            glib.timeout_add(5000, self.clear_notice)
 
     def on_change_device(self, widget):
         if widget.get_active() >= 0 and len(self.devices_list) >= (widget.get_active() + 1):
@@ -997,6 +1039,12 @@ class Aafm_GUI:
 
         self.refresh_host_files()
         self.refresh_device_files()
+
+    def on_clicked_add_device(self, widget):
+        self.show_add_device_dialog(
+            "What is the local IP address\nof your device?",
+            "Add a device by IP address",
+            self.lastDeviceIP)
 
     def on_clicked_refresh_devices(self, widget):
         self.refresh_devices_list()
@@ -1098,6 +1146,8 @@ class Aafm_GUI:
         self.config.set('aafm', 'show_permissions', 'yes' if self.showPermissions else 'no')
         self.config.set('aafm', 'show_owner', 'yes' if self.showOwner else 'no')
         self.config.set('aafm', 'show_group', 'yes' if self.showGroup else 'no')
+        self.config.set('aafm', 'last_serial', self.lastDeviceSerial)
+        self.config.set('aafm', 'last_ip', self.lastDeviceIP)
 
         # Set config location to home directory if we couldn't find a working path
         if self.config_file_loc == "":
@@ -1107,6 +1157,54 @@ class Aafm_GUI:
             # Set config location to home directory if we don't have write access to the found path
             self.config_file_loc = self.config_file_loc_default
             self.write_settings_file()
+
+    def on_keypress_add_device(self, widget, event):
+        if event.keyval == 65293:
+            self.dialogWindow.emit('response', gtk.RESPONSE_OK)
+
+    def on_response_add_device(self, widget, response):
+        device_network_path = self.dialogEntry.get_text()
+
+        self.dialogWindow.destroy()
+        if (response == gtk.RESPONSE_OK) and device_network_path is not None:
+            device_network_path = device_network_path.strip()
+            if device_network_path.strip() != '':
+                self.lastDeviceIP = device_network_path
+                connected = string.join(self.aafm.execute('%s connect %s' % (self.aafm.adb, device_network_path)))
+                print 'Connection response: %s' % connected
+                if 'already connected to' in connected:
+                    self.refresh_devices_list()
+                    self.show_notice('Already connected to %s' % device_network_path, True)
+                    glib.timeout_add(2000, self.clear_notice)
+                elif 'connected to' in connected:
+                    self.show_notice('Connected to %s' % device_network_path)
+                    glib.timeout_add(150, lambda: self.refresh_devices_list(True))
+                    glib.timeout_add(2000, self.clear_notice)
+                else:
+                    self.show_notice('Unable to connect to %s' % device_network_path, True)
+                    glib.timeout_add(5000, self.clear_notice)
+
+    def show_add_device_dialog(self, message, title='', default_text=''):
+        # Returns user input as a string or None
+        # If user does not input text it returns None, NOT AN EMPTY STRING.
+        self.dialogWindow = gtk.MessageDialog(self.window,
+                                              gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+                                              gtk.MESSAGE_QUESTION,
+                                              gtk.BUTTONS_OK_CANCEL,
+                                              message)
+
+        self.dialogWindow.set_title(title)
+        self.dialogWindow.set_icon_name('')
+
+        dialogBox = self.dialogWindow.get_content_area()
+        self.dialogEntry = gtk.Entry()
+        self.dialogEntry.set_text(default_text if default_text is not None else '')
+        self.dialogEntry.connect('key-press-event', self.on_keypress_add_device)
+        dialogBox.pack_end(self.dialogEntry, False, False, 0)
+
+        self.dialogWindow.connect('response', self.on_response_add_device)
+        self.dialogWindow.show_all()
+        self.dialogWindow.run()
 
     def die_callback(self, widget, data=None):
         self.destroy(widget, data)
