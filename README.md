@@ -3,7 +3,7 @@ Android ADB File Manager (aafm)
 
 An Android ADB-based file manager [created](https://github.com/sole/aafm) by [Soledad Penadés](http://soledadpenades.com).  It is continued here because development has ceased on the original repository.
 
-![Screenshot](http://i.imgur.com/jeG6YUt.png)
+![Screenshot](http://i.imgur.com/g8CJTEu.png)
 
 **aafm** uses ADB (one of the command line tools provided with the official Android SDK) to facilitate easy file transfers to/from any Android device.
 
@@ -36,7 +36,7 @@ sudo cp -R aafm.app /Applications/
 
 #### Windows ####
 
-Pre-built executables are coming soon.  For now, download the source package and execute **aafm-gui.py** directly from the **src** folder.
+Pre-built executables will not be available within the near future.  For now, download the source package and execute **aafm-gui.py** directly from the **src** folder.  Note that you will need to install Python, GTK and the pyGTK module if you don't have them already.
 
 ## Building ##
 
