@@ -1,5 +1,7 @@
 *~
 *.pyc
 *.swp
-deb_dist/
 .idea/
+build/
+dist/
+deb_dist/
