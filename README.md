@@ -9,7 +9,7 @@ An Android ADB-based file manager [created](https://github.com/sole/aafm) by [So
 
 ## Installing ##
 
-#### Debian/Ubuntu ####
+#### Ubuntu ####
 
 Execute the following in a terminal:
 
@@ -19,7 +19,16 @@ sudo apt-get update
 sudo apt-get install aafm
 ```
 
-**Note:** If you run into any problems, please submit an issue including a log of apt's output.
+#### Debian ####
+
+Execute the following in a terminal:
+
+```
+sudo add-apt-repository ppa:tslocum/aafm
+sudo nano /etc/apt/sources.list.d/tslocum-aafm-trusty.list  # Replace the two occurrences of "trusty" with "precise" in this file
+sudo apt-get update
+sudo apt-get install aafm
+```
 
 #### Mac ####
 
