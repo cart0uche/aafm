@@ -9,23 +9,20 @@ An Android ADB-based file manager [created](https://github.com/sole/aafm) by [So
 
 ## Installing ##
 
-#### Ubuntu ####
+#### Ubuntu & Debian ####
 
-Execute the following in a terminal:
-
-```
-sudo add-apt-repository ppa:tslocum/aafm
-sudo apt-get update
-sudo apt-get install aafm
-```
-
-#### Debian ####
-
-Execute the following in a terminal:
+Execute the following in a terminal.  **Read through fully before executing.**
 
 ```
 sudo add-apt-repository ppa:tslocum/aafm
-sudo nano /etc/apt/sources.list.d/tslocum-aafm-trusty.list  # Replace the two occurrences of "trusty" with "precise" in this file
+# If the command add-apt-repository is not found, run the following:
+#sudo apt-get install software-properties-common
+
+# Ubuntu users should skip to the next command (sudo apt-get update)
+# The following applies only to Debian users.
+# Replace the two occurrences of "trusty" with "precise" in the following file:
+sudo nano /etc/apt/sources.list.d/tslocum-aafm-trusty.list
+
 sudo apt-get update
 sudo apt-get install aafm
 ```
