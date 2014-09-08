@@ -20,7 +20,7 @@ sudo add-apt-repository ppa:tslocum/aafm
 
 # Ubuntu users should skip to the next command (sudo apt-get update)
 # The following applies only to Debian users.
-# Replace the two occurrences of "trusty" with "precise" in the following file:
+# Replace the two occurrences of your Debian release (probably "wheezy") with "precise" in the following file:
 sudo nano /etc/apt/sources.list.d/tslocum-aafm-trusty.list
 
 sudo apt-get update
